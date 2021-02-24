@@ -9,18 +9,18 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 // This contract handles swapping to and from xGoex, GhostToken's staking token.
 contract GhostStaking is ERC20("GhostStaking", "xGOEX"){
     using SafeMath for uint256;
-    IERC20 public goex;
+    IERC20 public ghost;
 
     // Define the Goex token contract
-    constructor(IERC20 _goex) public {
-        goex = _goex;
+    constructor(IERC20 _ghost) public {
+        ghost = _ghost;
     }
 
     // Enter the bar. Pay some GOEXs. Earn some shares.
     // Locks Goex and mints xGoex
     function enter(uint256 _amount) public {
         // Gets the amount of Goex locked in the contract
-        uint256 totalGoex = goex.balanceOf(address(this));
+        uint256 totalGoex = ghost.balanceOf(address(this));
         // Gets the amount of xGoex in existence
         uint256 totalShares = totalSupply();
         // If no xGoex exists, mint it 1:1 to the amount put in
@@ -33,7 +33,7 @@ contract GhostStaking is ERC20("GhostStaking", "xGOEX"){
             _mint(msg.sender, what);
         }
         // Lock the Goex in the contract
-        goex.transferFrom(msg.sender, address(this), _amount);
+        ghost.transferFrom(msg.sender, address(this), _amount);
     }
 
     // Leave the bar. Claim back your GOEXs.
@@ -42,8 +42,8 @@ contract GhostStaking is ERC20("GhostStaking", "xGOEX"){
         // Gets the amount of xGoex in existence
         uint256 totalShares = totalSupply();
         // Calculates the amount of Goex the xGoex is worth
-        uint256 what = _share.mul(goex.balanceOf(address(this))).div(totalShares);
+        uint256 what = _share.mul(ghost.balanceOf(address(this))).div(totalShares);
         _burn(msg.sender, _share);
-        goex.transfer(msg.sender, what);
+        ghost.transfer(msg.sender, what);
     }
 }
