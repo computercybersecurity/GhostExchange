@@ -5,15 +5,21 @@ const KingGhost = artifacts.require("KingGhost");
 const Timelock = artifacts.require("Timelock");
 const GovernorAlpha = artifacts.require("GovernorAlpha");
 const MockERC20 = artifacts.require("MockERC20");
+const BN = require("bn.js");
 
 function encodeParameters(types, values) {
   const abi = new ethers.utils.AbiCoder();
   return abi.encode(types, values);
 }
 
-contract("Governor", ([alice, minter, dev]) => {
+contract("Governor", ([alice, minter, dev, owner]) => {
+  const initialSupply = new BN("2000000000000000000000000000");
+
   it("should work", async () => {
     this.ghost = await GhostToken.new({ from: alice });
+    await this.ghost.transfer(dev, "1000000000000000000000000000", {
+      from: alice,
+    });
     await this.ghost.delegate(dev, { from: dev });
     this.king = await KingGhost.new(this.ghost.address, dev, "100", "0", "0", {
       from: alice,
@@ -28,11 +34,17 @@ contract("Governor", ([alice, minter, dev]) => {
     await this.king.add("100", this.lp.address, { from: alice });
     await this.lp.approve(this.king.address, "1000", { from: minter });
     await this.king.deposit(0, "100", { from: minter });
-    // Perform another deposit to make sure some GOEXs are minted in that 1 block.
+    // Perform another deposit to make sure some GOMIXs are minted in that 1 block.
     await this.king.deposit(0, "100", { from: minter });
-    assert.equal((await this.ghost.totalSupply()).valueOf(), "110");
+    assert.equal(
+      (await this.ghost.totalSupply()).sub(initialSupply).valueOf(),
+      "110"
+    );
     assert.equal((await this.ghost.balanceOf(minter)).valueOf(), "100");
-    assert.equal((await this.ghost.balanceOf(dev)).valueOf(), "10");
+    assert.equal(
+      (await this.ghost.balanceOf(dev)).valueOf(),
+      "1000000000000000000000000010"
+    );
     // Transfer ownership to timelock contract
     this.timelock = await Timelock.new(alice, time.duration.days(2), {
       from: alice,
@@ -75,7 +87,9 @@ contract("Governor", ([alice, minter, dev]) => {
       this.gov.queue("1"),
       "GovernorAlpha::queue: proposal can only be queued if it is succeeded"
     );
+    // const currentBlock = await time.latestBlock();
     console.log("Advancing 17280 blocks. Will take a while...");
+    // await time.advanceBlockTo(currentBlock + 17280);
     for (let i = 0; i < 17280; ++i) {
       await time.advanceBlock();
     }

@@ -4,7 +4,11 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // GhostToken with Governance.
-contract GhostToken is ERC20("GhostToken", "GOEX"), Ownable {
+contract GhostToken is ERC20("GhostMixer", "GOMIX"), Ownable {
+    constructor() public {
+        _mint(msg.sender, 2000000000 * 1e18);
+    }
+
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (KingGhost).
     function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);
@@ -113,9 +117,9 @@ contract GhostToken is ERC20("GhostToken", "GOEX"), Ownable {
         );
 
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "GOEX::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "GOEX::delegateBySig: invalid nonce");
-        require(now <= expiry, "GOEX::delegateBySig: signature expired");
+        require(signatory != address(0), "GOMIX::delegateBySig: invalid signature");
+        require(nonce == nonces[signatory]++, "GOMIX::delegateBySig: invalid nonce");
+        require(now <= expiry, "GOMIX::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -145,7 +149,7 @@ contract GhostToken is ERC20("GhostToken", "GOEX"), Ownable {
         view
         returns (uint256)
     {
-        require(blockNumber < block.number, "GOEX::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "GOMIX::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -182,7 +186,7 @@ contract GhostToken is ERC20("GhostToken", "GOEX"), Ownable {
         internal
     {
         address currentDelegate = _delegates[delegator];
-        uint256 delegatorBalance = balanceOf(delegator); // balance of underlying GOEXs (not scaled);
+        uint256 delegatorBalance = balanceOf(delegator); // balance of underlying GOMIXs (not scaled);
         _delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -218,7 +222,7 @@ contract GhostToken is ERC20("GhostToken", "GOEX"), Ownable {
     )
         internal
     {
-        uint32 blockNumber = safe32(block.number, "GOEX::_writeCheckpoint: block number exceeds 32 bits");
+        uint32 blockNumber = safe32(block.number, "GOMIX::_writeCheckpoint: block number exceeds 32 bits");
 
         if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;

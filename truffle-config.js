@@ -1,26 +1,39 @@
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+const keys = require("./key.json");
+
 module.exports = {
-  // Uncommenting the defaults below
-  // provides for an easier quick-start with Ganache.
-  // You can also follow this format for other networks;
-  // see <http://truffleframework.com/docs/advanced/configuration>
-  // for more details on how to specify configuration options!
-  //
-  //networks: {
-  //  development: {
-  //    host: "127.0.0.1",
-  //    port: 7545,
-  //    network_id: "*"
-  //  },
-  //  test: {
-  //    host: "127.0.0.1",
-  //    port: 7545,
-  //    network_id: "*"
-  //  }
-  //}
-  //
+  networks: {
+    test: {
+      host: "127.0.0.1",
+      port: 8545,
+      network_id: "*",
+    },
+    mainnet: {
+      provider: () =>
+        new HDWalletProvider(keys["mainnet"]["key"], keys["mainnet"]["rpc"]),
+      network_id: 56,
+      skipDryRun: true,
+    },
+    testnet: {
+      provider: () =>
+        new HDWalletProvider(keys["testnet"]["key"], keys["testnet"]["rpc"]),
+      network_id: 97,
+      skipDryRun: true,
+    },
+  },
   compilers: {
     solc: {
-      version: "0.6.12"
-    }
-  }
+      version: "0.6.12",
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+    },
+  },
+  plugins: ["truffle-plugin-verify"],
+  api_keys: {
+    etherscan: keys["mainnet"]["api"],
+  },
 };

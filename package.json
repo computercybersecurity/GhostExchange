@@ -15,12 +15,18 @@
   ],
   "scripts": {
     "compile": "truffle compile",
-    "prepublishOnly": "yarn run compile && node scripts/prepublish.js"
+    "prepublishOnly": "yarn run compile && node scripts/prepublish.js",
+    "deploy:mainnet": "truffle migrate --reset --network mainnet",
+    "deploy:testnet": "truffle migrate --reset --network testnet"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.1.0",
     "@openzeppelin/test-helpers": "^0.5.6",
     "truffle": "^5.1.41",
     "truffle-flattener": "^1.4.4"
+  },
+  "devDependencies": {
+    "@truffle/hdwallet-provider": "^1.2.2",
+    "truffle-plugin-verify": "^0.5.6"
   }
 }
