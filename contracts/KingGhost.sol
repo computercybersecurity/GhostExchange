@@ -78,6 +78,8 @@ contract KingGhost is Ownable, ReentrancyGuard {
     uint256 public totalAllocPoint = 0;
     // The block number when GHOST mining starts.
     uint256 public startBlock;
+    // Disabled pools
+    mapping (uint256 => bool) public disabledPools;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -127,6 +129,13 @@ contract KingGhost is Ownable, ReentrancyGuard {
         migrator = _migrator;
     }
 
+    // Disable pools for migration. Can only be called by the owner.
+    function disablePools(uint256[] memory _pids) external onlyOwner {
+        for (uint256 i = 0; i < _pids.length; i += 1) {
+            disabledPools[_pids[i]] = true;
+        }
+    }
+
     // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
     function migrate(uint256 _pidFrom, uint256 _pidTo) external {
         require(address(migrator) != address(0), "migrate: no migrator");
@@ -136,6 +145,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
         uint _amount = user.amount;
         require(_amount > 0, "Nothing to migrate");
         user.amount = 0;
+        user.rewardDebt = 0;
         IERC20 oldLpToken = pool.lpToken;
         oldLpToken.safeApprove(address(migrator), _amount);
         migrator.migrate(oldLpToken, poolInfo[_pidTo].lpToken, _pidTo, msg.sender, _amount);
@@ -209,6 +219,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_beneficiary];
         if(_amount > 0) {
+            require(disabledPools[_pid] == false, "Unable to deposit to disabled pools");
             pool.lpToken.safeTransferFrom(_sender, address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
