@@ -7,6 +7,7 @@ module.exports = async function (deployer) {
   const ghostPerBlock = "100000000000000000000";
   const startBlock = "6878257";
   const bonusEndBlock = "6879257";
+
   await deployer.deploy(
     KingGhost,
     ghostTokenInstance.address,

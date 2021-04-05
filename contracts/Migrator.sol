@@ -1,56 +1,72 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
-import "./uniswapv2/interfaces/IUniswapV2Factory.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "./ghostswap/interfaces/IGhostswapPair.sol";
+import "./ghostswap/interfaces/IGhostswapRouter01.sol";
 
 interface IKingGhost {
     function depositFor(uint256 _pid, uint _amount, address _holder) external;
 }
 
 contract Migrator {
-    address public king;
-    address public oldFactory;
-    IUniswapV2Factory public factory;
-    uint256 public notBeforeBlock;
-    uint256 public desiredLiquidity = uint256(-1);
+    using SafeERC20 for IERC20;
 
-    constructor(
-        address _king,
-        address _oldFactory,
-        IUniswapV2Factory _factory,
-        uint256 _notBeforeBlock
-    ) public {
-        king = _king;
-        oldFactory = _oldFactory;
-        factory = _factory;
-        notBeforeBlock = _notBeforeBlock;
+    IGhostswapRouter01 public oldRouter;
+    IGhostswapRouter01 public router;
+    IKingGhost public kingGhost;
+
+    constructor(IGhostswapRouter01 _oldRouter, IGhostswapRouter01 _router, IKingGhost _kingGhost) public {
+        oldRouter = _oldRouter;
+        router = _router;
+        kingGhost = _kingGhost;
     }
 
-    function migrate(IUniswapV2Pair orig, uint newPid, address user, uint amount) external {
-        require(msg.sender == king, "not from king ghost");
-        require(block.number >= notBeforeBlock, "too early to migrate");
-        require(orig.factory() == oldFactory, "not from old factory");
-        address token0 = orig.token0();
-        address token1 = orig.token1();
-        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
-        if (pair == IUniswapV2Pair(address(0))) {
-            pair = IUniswapV2Pair(factory.createPair(token0, token1));
-        }
-        orig.transferFrom(msg.sender, address(orig), amount);
-        orig.burn(address(pair));
-        pair.mint(address(this));
+    // msg.sender should have approved 'liquidity' amount of LP token of 'tokenA' and 'tokenB'
+    function migrate(
+        IGhostswapPair oldPair,
+        IGhostswapPair newPair,
+        uint newPid,
+        address user,
+        uint liquidity
+    ) external {
+        // Remove existing liquidity from 'oldRouter'
+        require(oldPair.transferFrom(msg.sender, address(this), liquidity), "LP transfer failed");
+        oldPair.approve(address(oldRouter), liquidity);
+        IERC20 tokenA = IERC20(oldPair.token0());
+        IERC20 tokenB = IERC20(oldPair.token1());
+        (uint256 amountA, uint256 amountB) = oldRouter.removeLiquidity(
+            address(tokenA),
+            address(tokenB),
+            liquidity,
+            0,
+            0,
+            address(this),
+            block.timestamp
+        );
 
-        pair.approve(king, pair.balanceOf(address(this)));
-        IKingGhost(king).depositFor(newPid, pair.balanceOf(address(this)), user);
-        uint token0Balance = IERC20(token0).balanceOf(address(this));
-        uint token1Balance = IERC20(token1).balanceOf(address(this));
-        if (token0Balance > 0) {
-            IERC20(token0).transfer(user, token0Balance);
-        }
-        if (token1Balance > 0) {
-            IERC20(token1).transfer(user, token1Balance);
-        }
+        // Approve max is ok because it's only to this contract and this contract has no other functionality
+        // Also some ERC20 tokens will fail when approving a set amount twice, such as USDT. Must approve 0 first. This circumvests that issue.
+        tokenA.approve(address(router), uint256(-1));
+        tokenB.approve(address(router), uint256(-1));
+
+        // Add liquidity to 'router'
+        (uint256 pooledAmountA, uint256 pooledAmountB,) = router.addLiquidity(
+            address(tokenA),
+            address(tokenB),
+            amountA,
+            amountB,
+            0,
+            0,
+            address(this),
+            block.timestamp
+        );
+
+        // Send remaining token balances to msg.sender
+        // No safeMath used because pooledAmount must be <= amount
+        tokenA.safeTransfer(user, amountA - pooledAmountA);
+        tokenB.safeTransfer(user, amountB - pooledAmountB);
+        newPair.approve(address(kingGhost), newPair.balanceOf(address(this)));
+        kingGhost.depositFor(newPid, newPair.balanceOf(address(this)), user);
     }
 }
