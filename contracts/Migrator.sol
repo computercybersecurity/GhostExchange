@@ -63,7 +63,7 @@ contract Migrator {
         tokenB.approve(address(router), uint256(-1));
 
         // Add liquidity to 'router'
-        (uint256 pooledAmountA, uint256 pooledAmountB, ) =
+        (uint256 pooledAmountA, uint256 pooledAmountB, uint256 pooledLiquidity) =
             router.addLiquidity(
                 address(tokenA),
                 address(tokenB),
@@ -79,9 +79,8 @@ contract Migrator {
         // No safeMath used because pooledAmount must be <= amount
         tokenA.safeTransfer(user, amountA - pooledAmountA);
         tokenB.safeTransfer(user, amountB - pooledAmountB);
-        uint256 newLpBalance = newPair.balanceOf(address(this));
-        require(newLpBalance > 0, "Nothing migrated");
-        newPair.approve(address(kingGhost), newLpBalance);
-        kingGhost.depositFor(newPid, newLpBalance, user);
+        require(pooledLiquidity > 0, "Nothing migrated");
+        newPair.approve(address(kingGhost), pooledLiquidity);
+        kingGhost.depositFor(newPid, pooledLiquidity, user);
     }
 }
