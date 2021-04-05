@@ -19,7 +19,7 @@ contract GhostStaking is ERC20("GhostStaking", "xGOMIX"), ReentrancyGuard {
 
     // Enter the bar. Pay some GOMIXs. Earn some shares.
     // Locks Gomix and mints xGomix
-    function enter(uint256 _amount) public nonReentrant {
+    function enter(uint256 _amount) external nonReentrant {
         // Gets the amount of Gomix locked in the contract
         uint256 totalGomix = ghost.balanceOf(address(this));
         // Gets the amount of xGomix in existence
@@ -42,7 +42,7 @@ contract GhostStaking is ERC20("GhostStaking", "xGOMIX"), ReentrancyGuard {
 
     // Leave the bar. Claim back your GOMIXs.
     // Unclocks the staked + gained Gomix and burns xGomix
-    function leave(uint256 _share) public nonReentrant {
+    function leave(uint256 _share) external nonReentrant {
         // Gets the amount of xGomix in existence
         uint256 totalShares = totalSupply();
         // Calculates the amount of Gomix the xGomix is worth
