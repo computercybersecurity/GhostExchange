@@ -87,7 +87,6 @@ contract("Governor", ([alice, minter, dev, owner]) => {
       this.gov.queue("1"),
       "GovernorAlpha::queue: proposal can only be queued if it is succeeded"
     );
-    // const currentBlock = await time.latestBlock();
     console.log("Advancing 17280 blocks. Will take a while...");
     // await time.advanceBlockTo(currentBlock + 17280);
     for (let i = 0; i < 17280; ++i) {

@@ -6,7 +6,11 @@ import "./ghostswap/interfaces/IGhostswapPair.sol";
 import "./ghostswap/interfaces/IGhostswapRouter01.sol";
 
 interface IKingGhost {
-    function depositFor(uint256 _pid, uint _amount, address _holder) external;
+    function depositFor(
+        uint256 _pid,
+        uint256 _amount,
+        address _holder
+    ) external;
 }
 
 contract Migrator {
@@ -16,7 +20,11 @@ contract Migrator {
     IGhostswapRouter01 public router;
     IKingGhost public kingGhost;
 
-    constructor(IGhostswapRouter01 _oldRouter, IGhostswapRouter01 _router, IKingGhost _kingGhost) public {
+    constructor(
+        IGhostswapRouter01 _oldRouter,
+        IGhostswapRouter01 _router,
+        IKingGhost _kingGhost
+    ) public {
         oldRouter = _oldRouter;
         router = _router;
         kingGhost = _kingGhost;
@@ -26,24 +34,28 @@ contract Migrator {
     function migrate(
         IGhostswapPair oldPair,
         IGhostswapPair newPair,
-        uint newPid,
+        uint256 newPid,
         address user,
-        uint liquidity
+        uint256 liquidity
     ) external {
         // Remove existing liquidity from 'oldRouter'
-        require(oldPair.transferFrom(msg.sender, address(this), liquidity), "LP transfer failed");
+        require(
+            oldPair.transferFrom(msg.sender, address(this), liquidity),
+            "LP transfer failed"
+        );
         oldPair.approve(address(oldRouter), liquidity);
         IERC20 tokenA = IERC20(oldPair.token0());
         IERC20 tokenB = IERC20(oldPair.token1());
-        (uint256 amountA, uint256 amountB) = oldRouter.removeLiquidity(
-            address(tokenA),
-            address(tokenB),
-            liquidity,
-            0,
-            0,
-            address(this),
-            block.timestamp
-        );
+        (uint256 amountA, uint256 amountB) =
+            oldRouter.removeLiquidity(
+                address(tokenA),
+                address(tokenB),
+                liquidity,
+                0,
+                0,
+                address(this),
+                block.timestamp
+            );
 
         // Approve max is ok because it's only to this contract and this contract has no other functionality
         // Also some ERC20 tokens will fail when approving a set amount twice, such as USDT. Must approve 0 first. This circumvests that issue.
@@ -51,22 +63,25 @@ contract Migrator {
         tokenB.approve(address(router), uint256(-1));
 
         // Add liquidity to 'router'
-        (uint256 pooledAmountA, uint256 pooledAmountB,) = router.addLiquidity(
-            address(tokenA),
-            address(tokenB),
-            amountA,
-            amountB,
-            0,
-            0,
-            address(this),
-            block.timestamp
-        );
+        (uint256 pooledAmountA, uint256 pooledAmountB, ) =
+            router.addLiquidity(
+                address(tokenA),
+                address(tokenB),
+                amountA,
+                amountB,
+                0,
+                0,
+                address(this),
+                block.timestamp
+            );
 
         // Send remaining token balances to msg.sender
         // No safeMath used because pooledAmount must be <= amount
         tokenA.safeTransfer(user, amountA - pooledAmountA);
         tokenB.safeTransfer(user, amountB - pooledAmountB);
-        newPair.approve(address(kingGhost), newPair.balanceOf(address(this)));
-        kingGhost.depositFor(newPid, newPair.balanceOf(address(this)), user);
+        uint256 newLpBalance = newPair.balanceOf(address(this));
+        require(newLpBalance > 0, "Nothing migrated");
+        newPair.approve(address(kingGhost), newLpBalance);
+        kingGhost.depositFor(newPid, newLpBalance, user);
     }
 }

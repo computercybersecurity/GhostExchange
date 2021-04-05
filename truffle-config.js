@@ -21,6 +21,10 @@ module.exports = {
       skipDryRun: true,
     },
   },
+  mocha: {
+    enableTimeouts: false,
+    before_timeout: 12000000,
+  },
   compilers: {
     solc: {
       version: "0.6.12",

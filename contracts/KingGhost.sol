@@ -18,7 +18,13 @@ interface IMigratorKing {
     // GhostExchange must mint EXACTLY the same amount of GhostExchange LP tokens or
     // else something bad will happen. Traditional Pancakeswap does not
     // do that so be careful!
-    function migrate(IERC20 oldLp, IERC20 newLp, uint newPid, address user, uint amount) external;
+    function migrate(
+        IERC20 oldLp,
+        IERC20 newLp,
+        uint256 newPid,
+        address user,
+        uint256 amount
+    ) external;
 }
 
 // KingGhost is the king of Ghost. He can make Ghost and he is a fair guy.
@@ -34,7 +40,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
 
     // Info of each user.
     struct UserInfo {
-        uint256 amount;     // How many LP tokens the user has provided.
+        uint256 amount; // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         //
         // We do some fancy math here. Basically, any point in time, the amount of GHOSTs
@@ -51,9 +57,9 @@ contract KingGhost is Ownable, ReentrancyGuard {
 
     // Info of each pool.
     struct PoolInfo {
-        IERC20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. GHOSTs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that GHOSTs distribution occurs.
+        IERC20 lpToken; // Address of LP token contract.
+        uint256 allocPoint; // How many allocation points assigned to this pool. GHOSTs to distribute per block.
+        uint256 lastRewardBlock; // Last block number that GHOSTs distribution occurs.
         uint256 accGhostPerShare; // Accumulated GHOSTs per share, times 1e12. See below.
     }
 
@@ -73,17 +79,21 @@ contract KingGhost is Ownable, ReentrancyGuard {
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
-    mapping (uint256 => mapping (address => UserInfo)) public userInfo;
+    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     // The block number when GHOST mining starts.
     uint256 public startBlock;
     // Disabled pools
-    mapping (uint256 => bool) public disabledPools;
+    mapping(uint256 => bool) public disabledPools;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event EmergencyWithdraw(
+        address indexed user,
+        uint256 indexed pid,
+        uint256 amount
+    );
 
     constructor(
         GhostToken _ghost,
@@ -107,20 +117,25 @@ contract KingGhost is Ownable, ReentrancyGuard {
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(uint256 _allocPoint, IERC20 _lpToken) public onlyOwner {
         massUpdatePools();
-        uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
+        uint256 lastRewardBlock =
+            block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
-        poolInfo.push(PoolInfo({
-            lpToken: _lpToken,
-            allocPoint: _allocPoint,
-            lastRewardBlock: lastRewardBlock,
-            accGhostPerShare: 0
-        }));
+        poolInfo.push(
+            PoolInfo({
+                lpToken: _lpToken,
+                allocPoint: _allocPoint,
+                lastRewardBlock: lastRewardBlock,
+                accGhostPerShare: 0
+            })
+        );
     }
 
     // Update the given pool's GHOST allocation point. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint) public onlyOwner {
         massUpdatePools();
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
+        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
+            _allocPoint
+        );
         poolInfo[_pid].allocPoint = _allocPoint;
     }
 
@@ -142,38 +157,59 @@ contract KingGhost is Ownable, ReentrancyGuard {
         _claimGomixReward(_pidFrom, msg.sender);
         PoolInfo storage pool = poolInfo[_pidFrom];
         UserInfo storage user = userInfo[_pidFrom][msg.sender];
-        uint _amount = user.amount;
+        uint256 _amount = user.amount;
         require(_amount > 0, "Nothing to migrate");
         user.amount = 0;
         user.rewardDebt = 0;
         IERC20 oldLpToken = pool.lpToken;
         oldLpToken.safeApprove(address(migrator), _amount);
-        migrator.migrate(oldLpToken, poolInfo[_pidTo].lpToken, _pidTo, msg.sender, _amount);
+        migrator.migrate(
+            oldLpToken,
+            poolInfo[_pidTo].lpToken,
+            _pidTo,
+            msg.sender,
+            _amount
+        );
     }
 
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
+    function getMultiplier(uint256 _from, uint256 _to)
+        public
+        view
+        returns (uint256)
+    {
         if (_to <= bonusEndBlock) {
             return _to.sub(_from).mul(BONUS_MULTIPLIER);
         } else if (_from >= bonusEndBlock) {
             return _to.sub(_from);
         } else {
-            return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                _to.sub(bonusEndBlock)
-            );
+            return
+                bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
+                    _to.sub(bonusEndBlock)
+                );
         }
     }
 
     // View function to see pending GHOSTs on frontend.
-    function pendingGhost(uint256 _pid, address _user) external view returns (uint256) {
+    function pendingGhost(uint256 _pid, address _user)
+        external
+        view
+        returns (uint256)
+    {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accGhostPerShare = pool.accGhostPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
-            uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 ghostReward = multiplier.mul(ghostPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accGhostPerShare = accGhostPerShare.add(ghostReward.mul(1e12).div(lpSupply));
+            uint256 multiplier =
+                getMultiplier(pool.lastRewardBlock, block.number);
+            uint256 ghostReward =
+                multiplier.mul(ghostPerBlock).mul(pool.allocPoint).div(
+                    totalAllocPoint
+                );
+            accGhostPerShare = accGhostPerShare.add(
+                ghostReward.mul(1e12).div(lpSupply)
+            );
         }
         return user.amount.mul(accGhostPerShare).div(1e12).sub(user.rewardDebt);
     }
@@ -198,14 +234,23 @@ contract KingGhost is Ownable, ReentrancyGuard {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 ghostReward = multiplier.mul(ghostPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        uint256 ghostReward =
+            multiplier.mul(ghostPerBlock).mul(pool.allocPoint).div(
+                totalAllocPoint
+            );
         ghost.mint(devaddr, ghostReward.div(10));
         ghost.mint(address(this), ghostReward);
-        pool.accGhostPerShare = pool.accGhostPerShare.add(ghostReward.mul(1e12).div(lpSupply));
+        pool.accGhostPerShare = pool.accGhostPerShare.add(
+            ghostReward.mul(1e12).div(lpSupply)
+        );
         pool.lastRewardBlock = block.number;
     }
 
-    function depositFor(uint256 _pid, uint _amount, address _holder) external nonReentrant {
+    function depositFor(
+        uint256 _pid,
+        uint256 _amount,
+        address _holder
+    ) external nonReentrant {
         _deposit(_pid, _amount, msg.sender, _holder);
     }
 
@@ -214,12 +259,20 @@ contract KingGhost is Ownable, ReentrancyGuard {
     }
 
     // Deposit LP tokens to KingGhost for GHOST allocation.
-    function _deposit(uint256 _pid, uint256 _amount, address _sender, address _beneficiary) internal {
+    function _deposit(
+        uint256 _pid,
+        uint256 _amount,
+        address _sender,
+        address _beneficiary
+    ) internal {
         _claimGomixReward(_pid, _beneficiary);
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_beneficiary];
-        if(_amount > 0) {
-            require(disabledPools[_pid] == false, "Unable to deposit to disabled pools");
+        if (_amount > 0) {
+            require(
+                disabledPools[_pid] == false,
+                "Unable to deposit to disabled pools"
+            );
             pool.lpToken.safeTransferFrom(_sender, address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
@@ -233,7 +286,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
-        if(_amount > 0) {
+        if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
@@ -241,13 +294,16 @@ contract KingGhost is Ownable, ReentrancyGuard {
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
-    function _claimGomixReward(uint _pid, address _user) internal {
+    function _claimGomixReward(uint256 _pid, address _user) internal {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accGhostPerShare).div(1e12).sub(user.rewardDebt);
-            if(pending > 0) {
+            uint256 pending =
+                user.amount.mul(pool.accGhostPerShare).div(1e12).sub(
+                    user.rewardDebt
+                );
+            if (pending > 0) {
                 safeGhostTransfer(msg.sender, pending);
             }
         }
