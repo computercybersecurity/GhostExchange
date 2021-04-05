@@ -34,7 +34,7 @@ contract GhostStaking is ERC20("GhostStaking", "xGOMIX"), ReentrancyGuard {
             _mint(msg.sender, what);
         }
         // Lock the Gomix in the contract
-        ghost.transferFrom(msg.sender, address(this), _amount);
+        require(ghost.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
     }
 
     // Leave the bar. Claim back your GOMIXs.
@@ -45,6 +45,6 @@ contract GhostStaking is ERC20("GhostStaking", "xGOMIX"), ReentrancyGuard {
         // Calculates the amount of Gomix the xGomix is worth
         uint256 what = _share.mul(ghost.balanceOf(address(this))).div(totalShares);
         _burn(msg.sender, _share);
-        ghost.transfer(msg.sender, what);
+        require(ghost.transfer(msg.sender, what), "Transfer failed");
     }
 }

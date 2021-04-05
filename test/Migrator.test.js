@@ -4,7 +4,8 @@ const KingGhost = artifacts.require("KingGhost");
 const MockERC20 = artifacts.require("MockERC20");
 const UniswapV2Pair = artifacts.require("UniswapV2Pair");
 const UniswapV2Factory = artifacts.require("UniswapV2Factory");
-const Migrator = artifacts.require("Migrator");
+const UniswapV2Router = artifacts.require("UniswapV2Router02");
+const Migrator = artifacts.require("Migrator2");
 
 contract("Migrator", ([alice, bob, dev, minter]) => {
   beforeEach(async () => {
@@ -14,6 +15,14 @@ contract("Migrator", ([alice, bob, dev, minter]) => {
     this.weth = await MockERC20.new("WETH", "WETH", "100000000", {
       from: minter,
     });
+    this.router1 = await UniswapV2Router.new(
+      this.factor1.address,
+      this.weth.address
+    );
+    this.router2 = await UniswapV2Router.new(
+      this.factor2.address,
+      this.weth.address
+    );
     this.token = await MockERC20.new("TOKEN", "TOKEN", "100000000", {
       from: minter,
     });
@@ -34,10 +43,9 @@ contract("Migrator", ([alice, bob, dev, minter]) => {
       { from: alice }
     );
     this.migrator = await Migrator.new(
-      this.king.address,
-      this.factory1.address,
-      this.factory2.address,
-      "0"
+      this.router1.address,
+      this.router2.address,
+      this.king.address
     );
     await this.ghost.transferOwnership(this.king.address, { from: alice });
     await this.king.add("100", this.lp1.address, { from: alice });
@@ -58,10 +66,6 @@ contract("Migrator", ([alice, bob, dev, minter]) => {
       (await this.lp1.balanceOf(this.king.address)).valueOf(),
       "2000000"
     );
-    await expectRevert(this.king.migrate(0), "migrate: no migrator");
-    await this.king.setMigrator(this.migrator.address, { from: alice });
-    await expectRevert(this.king.migrate(0), "migrate: bad");
-    await this.factory2.setMigrator(this.migrator.address, { from: alice });
     await this.king.migrate(0);
     assert.equal((await this.lp1.balanceOf(this.king.address)).valueOf(), "0");
     assert.equal(

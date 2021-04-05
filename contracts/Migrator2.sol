@@ -5,38 +5,44 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "./uniswapv2/interfaces/IUniswapV2Router01.sol";
 
+interface IKingGhost {
+    function depositFor(uint256 _pid, uint _amount, address _holder) external;
+}
+
 contract Migrator2 {
     using SafeERC20 for IERC20;
 
     IUniswapV2Router01 public oldRouter;
     IUniswapV2Router01 public router;
+    IKingGhost public kingGhost;
 
-    constructor(IUniswapV2Router01 _oldRouter, IUniswapV2Router01 _router) public {
+    constructor(IUniswapV2Router01 _oldRouter, IUniswapV2Router01 _router, IKingGhost _kingGhost) public {
         oldRouter = _oldRouter;
         router = _router;
+        kingGhost = _kingGhost;
     }
 
     // msg.sender should have approved 'liquidity' amount of LP token of 'tokenA' and 'tokenB'
     function migrate(
-        IERC20 tokenA,
-        IERC20 tokenB,
-        uint liquidity,
-        uint amountAMin,
-        uint amountBMin,
-        uint deadline
+        IUniswapV2Pair oldPair,
+        IUniswapV2Pair newPair,
+        uint newPid,
+        address user,
+        uint liquidity
     ) external {
         // Remove existing liquidity from 'oldRouter'
-        address pair = pairFor(oldRouter.factory(), address(tokenA), address(tokenB));
-        IERC20(pair).safeTransferFrom(msg.sender, address(this), liquidity);
-        IERC20(pair).approve(address(oldRouter), liquidity);
+        require(oldPair.transferFrom(msg.sender, address(this), liquidity), "LP transfer failed");
+        oldPair.approve(address(oldRouter), liquidity);
+        IERC20 tokenA = IERC20(oldPair.token0());
+        IERC20 tokenB = IERC20(oldPair.token1());
         (uint256 amountA, uint256 amountB) = oldRouter.removeLiquidity(
             address(tokenA),
             address(tokenB),
             liquidity,
-            amountAMin,
-            amountBMin,
+            0,
+            0,
             address(this),
-            deadline
+            block.timestamp
         );
 
         // Approve max is ok because it's only to this contract and this contract has no other functionality
@@ -50,33 +56,17 @@ contract Migrator2 {
             address(tokenB),
             amountA,
             amountB,
-            amountAMin,
-            amountBMin,
-            address(msg.sender),
-            deadline
+            0,
+            0,
+            address(this),
+            block.timestamp
         );
 
         // Send remaining token balances to msg.sender
         // No safeMath used because pooledAmount must be <= amount
-        tokenA.safeTransfer(msg.sender, amountA - pooledAmountA);
-        tokenB.safeTransfer(msg.sender, amountB - pooledAmountB);
-    }
-
-    // returns sorted token addresses, used to handle return values from pairs sorted in this order
-    function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        require(tokenA != tokenB, 'UniswapV2Library: IDENTICAL_ADDRESSES');
-        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'UniswapV2Library: ZERO_ADDRESS');
-    }
-
-    // calculates the CREATE2 address for a pair without making any external calls
-    function pairFor(address factory, address tokenA, address tokenB) internal pure returns (address pair) {
-        (address token0, address token1) = sortTokens(tokenA, tokenB);
-        pair = address(uint(keccak256(abi.encodePacked(
-                hex'ff',
-                factory,
-                keccak256(abi.encodePacked(token0, token1)),
-                hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
-            ))));
+        tokenA.safeTransfer(user, amountA - pooledAmountA);
+        tokenB.safeTransfer(user, amountB - pooledAmountB);
+        newPair.approve(address(kingGhost), newPair.balanceOf(address(this)));
+        kingGhost.depositFor(newPid, newPair.balanceOf(address(this)), user);
     }
 }

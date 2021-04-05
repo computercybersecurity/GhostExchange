@@ -129,6 +129,7 @@ contract("KingGhost", ([alice, bob, carol, dev, minter, owner]) => {
       await this.ghost.transferOwnership(this.king.address, { from: owner });
       await this.king.add("100", this.lp.address, { from: owner });
       await this.lp.approve(this.king.address, "1000", { from: bob });
+      await this.lp.approve(this.king.address, "1000", { from: alice });
       await time.advanceBlockTo("199");
       assert.equal(
         (await this.ghost.totalSupply()).sub(initialSupply).valueOf(),
@@ -140,14 +141,14 @@ contract("KingGhost", ([alice, bob, carol, dev, minter, owner]) => {
         "0"
       );
       await time.advanceBlockTo("209");
-      await this.king.deposit(0, "10", { from: bob }); // block 210
+      await this.king.depositFor(0, "10", bob, { from: alice }); // block 210
       assert.equal(
         (await this.ghost.totalSupply()).sub(initialSupply).valueOf(),
         "0"
       );
       assert.equal((await this.ghost.balanceOf(bob)).valueOf(), "0");
       assert.equal((await this.ghost.balanceOf(dev)).valueOf(), "0");
-      assert.equal((await this.lp.balanceOf(bob)).valueOf(), "990");
+      assert.equal((await this.lp.balanceOf(alice)).valueOf(), "990");
       await time.advanceBlockTo("219");
       await this.king.withdraw(0, "10", { from: bob }); // block 220
       assert.equal(
@@ -156,7 +157,7 @@ contract("KingGhost", ([alice, bob, carol, dev, minter, owner]) => {
       );
       assert.equal((await this.ghost.balanceOf(bob)).valueOf(), "10000");
       assert.equal((await this.ghost.balanceOf(dev)).valueOf(), "1000");
-      assert.equal((await this.lp.balanceOf(bob)).valueOf(), "1000");
+      assert.equal((await this.lp.balanceOf(bob)).valueOf(), "1010");
     });
 
     it("should distribute GOMIXs properly for each staker", async () => {

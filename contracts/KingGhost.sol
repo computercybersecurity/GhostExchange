@@ -18,7 +18,7 @@ interface IMigratorKing {
     // GhostExchange must mint EXACTLY the same amount of GhostExchange LP tokens or
     // else something bad will happen. Traditional Pancakeswap does not
     // do that so be careful!
-    function migrate(IERC20 token) external returns (IERC20);
+    function migrate(IERC20 oldLp, IERC20 newLp, uint newPid, address user, uint amount) external;
 }
 
 // KingGhost is the king of Ghost. He can make Ghost and he is a fair guy.
@@ -123,20 +123,22 @@ contract KingGhost is Ownable, ReentrancyGuard {
     }
 
     // Set the migrator contract. Can only be called by the owner.
-    function setMigrator(IMigratorKing _migrator) public onlyOwner {
+    function setMigrator(IMigratorKing _migrator) external onlyOwner {
         migrator = _migrator;
     }
 
     // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
-    function migrate(uint256 _pid) public {
+    function migrate(uint256 _pidFrom, uint256 _pidTo) external {
         require(address(migrator) != address(0), "migrate: no migrator");
-        PoolInfo storage pool = poolInfo[_pid];
-        IERC20 lpToken = pool.lpToken;
-        uint256 bal = lpToken.balanceOf(address(this));
-        lpToken.safeApprove(address(migrator), bal);
-        IERC20 newLpToken = migrator.migrate(lpToken);
-        require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-        pool.lpToken = newLpToken;
+        _claimGomixReward(_pidFrom, msg.sender);
+        PoolInfo storage pool = poolInfo[_pidFrom];
+        UserInfo storage user = userInfo[_pidFrom][msg.sender];
+        uint _amount = user.amount;
+        require(_amount > 0, "Nothing to migrate");
+        user.amount = 0;
+        IERC20 oldLpToken = pool.lpToken;
+        oldLpToken.safeApprove(address(migrator), _amount);
+        migrator.migrate(oldLpToken, poolInfo[_pidTo].lpToken, _pidTo, msg.sender, _amount);
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -193,10 +195,44 @@ contract KingGhost is Ownable, ReentrancyGuard {
         pool.lastRewardBlock = block.number;
     }
 
+    function depositFor(uint256 _pid, uint _amount, address _holder) external nonReentrant {
+        _deposit(_pid, _amount, msg.sender, _holder);
+    }
+
+    function deposit(uint256 _pid, uint256 _amount) external nonReentrant {
+        _deposit(_pid, _amount, msg.sender, msg.sender);
+    }
+
     // Deposit LP tokens to KingGhost for GHOST allocation.
-    function deposit(uint256 _pid, uint256 _amount) public nonReentrant {
+    function _deposit(uint256 _pid, uint256 _amount, address _sender, address _beneficiary) internal {
+        _claimGomixReward(_pid, _beneficiary);
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][_beneficiary];
+        if(_amount > 0) {
+            pool.lpToken.safeTransferFrom(_sender, address(this), _amount);
+            user.amount = user.amount.add(_amount);
+        }
+        user.rewardDebt = user.amount.mul(pool.accGhostPerShare).div(1e12);
+        emit Deposit(_beneficiary, _pid, _amount);
+    }
+
+    // Withdraw LP tokens from KingGhost.
+    function withdraw(uint256 _pid, uint256 _amount) public nonReentrant {
+        _claimGomixReward(_pid, msg.sender);
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+        require(user.amount >= _amount, "withdraw: not good");
+        if(_amount > 0) {
+            user.amount = user.amount.sub(_amount);
+            pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        }
+        user.rewardDebt = user.amount.mul(pool.accGhostPerShare).div(1e12);
+        emit Withdraw(msg.sender, _pid, _amount);
+    }
+
+    function _claimGomixReward(uint _pid, address _user) internal {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][_user];
         updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accGhostPerShare).div(1e12).sub(user.rewardDebt);
@@ -204,30 +240,6 @@ contract KingGhost is Ownable, ReentrancyGuard {
                 safeGhostTransfer(msg.sender, pending);
             }
         }
-        if(_amount > 0) {
-            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            user.amount = user.amount.add(_amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accGhostPerShare).div(1e12);
-        emit Deposit(msg.sender, _pid, _amount);
-    }
-
-    // Withdraw LP tokens from KingGhost.
-    function withdraw(uint256 _pid, uint256 _amount) public nonReentrant {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
-        updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accGhostPerShare).div(1e12).sub(user.rewardDebt);
-        if(pending > 0) {
-            safeGhostTransfer(msg.sender, pending);
-        }
-        if(_amount > 0) {
-            user.amount = user.amount.sub(_amount);
-            pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accGhostPerShare).div(1e12);
-        emit Withdraw(msg.sender, _pid, _amount);
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
