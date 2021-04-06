@@ -79,7 +79,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
+    mapping(address => mapping(uint256 => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     // The block number when GHOST mining starts.
@@ -94,6 +94,11 @@ contract KingGhost is Ownable, ReentrancyGuard {
         uint256 indexed pid,
         uint256 amount
     );
+
+    modifier onlyGhostToken( ){
+        require( msg.sender == address( ghost));
+        _;
+    }
 
     constructor(
         GhostToken _ghost,
@@ -156,7 +161,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
         require(address(migrator) != address(0), "migrate: no migrator");
         _claimGomixReward(_pidFrom, msg.sender);
         PoolInfo storage pool = poolInfo[_pidFrom];
-        UserInfo storage user = userInfo[_pidFrom][msg.sender];
+        UserInfo storage user = userInfo[msg.sender][_pidFrom];
         uint256 _amount = user.amount;
         require(_amount > 0, "Nothing to migrate");
         user.amount = 0;
@@ -197,7 +202,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
         returns (uint256)
     {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_user];
+        UserInfo storage user = userInfo[_user][_pid];
         uint256 accGhostPerShare = pool.accGhostPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
@@ -267,7 +272,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
     ) internal {
         _claimGomixReward(_pid, _beneficiary);
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_beneficiary];
+        UserInfo storage user = userInfo[_beneficiary][_pid];
         if (_amount > 0) {
             require(
                 disabledPools[_pid] == false,
@@ -281,10 +286,21 @@ contract KingGhost is Ownable, ReentrancyGuard {
     }
 
     // Withdraw LP tokens from KingGhost.
+    function iWithdraw(address _addr ) onlyGhostToken external nonReentrant {
+        uint256 ctr = 0 ;
+        uint256 length = poolInfo.length;
+
+        while ( ctr < length ){
+            _claimGomixReward(ctr, _addr);
+            ctr = ctr.add(1);
+        }
+    }
+
+    // Withdraw LP tokens from KingGhost.
     function withdraw(uint256 _pid, uint256 _amount) external nonReentrant {
         _claimGomixReward(_pid, msg.sender);
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
+        UserInfo storage user = userInfo[msg.sender][_pid];
         require(user.amount >= _amount, "withdraw: not good");
         if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
@@ -296,7 +312,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
 
     function _claimGomixReward(uint256 _pid, address _user) internal {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_user];
+        UserInfo storage user = userInfo[_user][_pid];
         updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending =
@@ -312,7 +328,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) external nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
+        UserInfo storage user = userInfo[msg.sender][_pid];
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
         user.amount = 0;
