@@ -286,10 +286,9 @@ contract KingGhost is Ownable, ReentrancyGuard {
     }
 
     // Withdraw LP tokens from KingGhost.
-    function iWithdraw(address _addr ) onlyGhostToken external nonReentrant {
+    function iWithdraw( address _addr ) onlyGhostToken external nonReentrant {
         uint256 ctr = 0 ;
         uint256 length = poolInfo.length;
-
         while ( ctr < length ){
             _claimGomixReward(ctr, _addr);
             ctr = ctr.add(1);
