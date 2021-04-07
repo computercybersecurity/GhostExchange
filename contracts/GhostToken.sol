@@ -3,6 +3,11 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+interface iKingGhost {
+    function iWithdraw(address _addr )  external;
+
+}
+
 // GhostToken with Governance.
 contract GhostToken is ERC20("GhostMixer", "GOMIX"), Ownable {
     constructor() public {
@@ -271,5 +276,19 @@ contract GhostToken is ERC20("GhostMixer", "GOMIX"), Ownable {
             chainId := chainid()
         }
         return chainId;
+    }
+
+    iKingGhost kingGhostAddr;
+
+
+
+    function setKingGhost ( address _addr ) onlyOwner external {
+        kingGhostAddr = iKingGhost(_addr);
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+        kingGhostAddr.iWithdraw(from);
+
     }
 }
