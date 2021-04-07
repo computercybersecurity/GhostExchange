@@ -38,6 +38,11 @@ contract Migrator {
         address user,
         uint256 liquidity
     ) external {
+        require(
+            oldPair.token0() == newPair.token0() &&
+                oldPair.token1() == newPair.token1(),
+            "Unable to migrate"
+        );
         // Remove existing liquidity from 'oldRouter'
         require(
             oldPair.transferFrom(msg.sender, address(this), liquidity),
@@ -63,7 +68,11 @@ contract Migrator {
         tokenB.approve(address(router), uint256(-1));
 
         // Add liquidity to 'router'
-        (uint256 pooledAmountA, uint256 pooledAmountB, uint256 pooledLiquidity) =
+        (
+            uint256 pooledAmountA,
+            uint256 pooledAmountB,
+            uint256 pooledLiquidity
+        ) =
             router.addLiquidity(
                 address(tokenA),
                 address(tokenB),
