@@ -5,7 +5,7 @@ const MockERC20 = artifacts.require("MockERC20");
 const BN = require("bn.js");
 
 contract("KingGhost", ([alice, bob, carol, dev, minter, owner]) => {
-  const initialSupply = new BN("2000000000000000000000000000");
+  const initialSupply = new BN("5000000000000000000000000000");
 
   beforeEach(async () => {
     this.ghost = await GhostToken.new({ from: owner });

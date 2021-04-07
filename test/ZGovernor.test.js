@@ -13,7 +13,7 @@ function encodeParameters(types, values) {
 }
 
 contract("Governor", ([alice, minter, dev, owner]) => {
-  const initialSupply = new BN("2000000000000000000000000000");
+  const initialSupply = new BN("5000000000000000000000000000");
 
   it("should work", async () => {
     this.ghost = await GhostToken.new({ from: alice });

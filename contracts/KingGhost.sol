@@ -78,6 +78,8 @@ contract KingGhost is Ownable, ReentrancyGuard {
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
+    // Pids of LP tokens
+    mapping(address => uint256) _pids;
     // Info of each user that stakes LP tokens.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
@@ -114,8 +116,9 @@ contract KingGhost is Ownable, ReentrancyGuard {
     }
 
     // Add a new lp to the pool. Can only be called by the owner.
-    // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(uint256 _allocPoint, IERC20 _lpToken) external onlyOwner {
+        require(_pids[address(_lpToken)] == 0, "KingGhost: already added");
+
         massUpdatePools();
         uint256 lastRewardBlock =
             block.number > startBlock ? block.number : startBlock;
@@ -128,6 +131,7 @@ contract KingGhost is Ownable, ReentrancyGuard {
                 accGhostPerShare: 0
             })
         );
+        _pids[address(_lpToken)] = poolInfo.length;
     }
 
     // Update the given pool's GHOST allocation point. Can only be called by the owner.
@@ -142,6 +146,12 @@ contract KingGhost is Ownable, ReentrancyGuard {
     // Set the migrator contract. Can only be called by the owner.
     function setMigrator(IMigratorKing _migrator) external onlyOwner {
         migrator = _migrator;
+    }
+
+    // Return PID of LP token
+    function getPid(address _lpToken) external view returns (uint256) {
+        require(_pids[_lpToken] > 0, "Does not exist");
+        return _pids[_lpToken].sub(1);
     }
 
     // Disable pools for migration. Can only be called by the owner.

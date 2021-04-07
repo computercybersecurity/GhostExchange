@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // GhostToken with Governance.
 contract GhostToken is ERC20("GhostMixer", "GOMIX"), Ownable {
     constructor() public {
-        _mint(msg.sender, 2000000000 * 1e18);
+        _mint(msg.sender, 5000000000 * 1e18);
     }
 
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (KingGhost).
