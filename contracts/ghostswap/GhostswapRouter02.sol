@@ -25,7 +25,7 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
     }
 
     receive() external payable {
-        assert(msg.sender == WBNB); // only accept ETH via fallback from the WBNB contract
+        assert(msg.sender == WBNB); // only accept BNB via fallback from the WBNB contract
     }
 
     // **** ADD LIQUIDITY ****
@@ -101,11 +101,11 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         liquidity = IGhostswapPair(pair).mint(to);
     }
 
-    function addLiquidityETH(
+    function addLiquidityBNB(
         address token,
         uint256 amountTokenDesired,
         uint256 amountTokenMin,
-        uint256 amountETHMin,
+        uint256 amountBNBMin,
         address to,
         uint256 deadline
     )
@@ -116,26 +116,26 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         ensure(deadline)
         returns (
             uint256 amountToken,
-            uint256 amountETH,
+            uint256 amountBNB,
             uint256 liquidity
         )
     {
-        (amountToken, amountETH) = _addLiquidity(
+        (amountToken, amountBNB) = _addLiquidity(
             token,
             WBNB,
             amountTokenDesired,
             msg.value,
             amountTokenMin,
-            amountETHMin
+            amountBNBMin
         );
         address pair = GhostswapLibrary.pairFor(factory, token, WBNB);
         TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
-        IWBNB(WBNB).deposit{value: amountETH}();
-        assert(IWBNB(WBNB).transfer(pair, amountETH));
+        IWBNB(WBNB).deposit{value: amountBNB}();
+        assert(IWBNB(WBNB).transfer(pair, amountBNB));
         liquidity = IGhostswapPair(pair).mint(to);
-        // refund dust eth, if any
-        if (msg.value > amountETH)
-            TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
+        // refund dust bnb, if any
+        if (msg.value > amountBNB)
+            TransferHelper.safeTransferBNB(msg.sender, msg.value - amountBNB);
     }
 
     // **** REMOVE LIQUIDITY ****
@@ -171,11 +171,11 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         );
     }
 
-    function removeLiquidityETH(
+    function removeLiquidityBNB(
         address token,
         uint256 liquidity,
         uint256 amountTokenMin,
-        uint256 amountETHMin,
+        uint256 amountBNBMin,
         address to,
         uint256 deadline
     )
@@ -183,20 +183,20 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         virtual
         override
         ensure(deadline)
-        returns (uint256 amountToken, uint256 amountETH)
+        returns (uint256 amountToken, uint256 amountBNB)
     {
-        (amountToken, amountETH) = removeLiquidity(
+        (amountToken, amountBNB) = removeLiquidity(
             token,
             WBNB,
             liquidity,
             amountTokenMin,
-            amountETHMin,
+            amountBNBMin,
             address(this),
             deadline
         );
         TransferHelper.safeTransfer(token, to, amountToken);
-        IWBNB(WBNB).withdraw(amountETH);
-        TransferHelper.safeTransferETH(to, amountETH);
+        IWBNB(WBNB).withdraw(amountBNB);
+        TransferHelper.safeTransferBNB(to, amountBNB);
     }
 
     function removeLiquidityWithPermit(
@@ -234,11 +234,11 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         );
     }
 
-    function removeLiquidityETHWithPermit(
+    function removeLiquidityBNBWithPermit(
         address token,
         uint256 liquidity,
         uint256 amountTokenMin,
-        uint256 amountETHMin,
+        uint256 amountBNBMin,
         address to,
         uint256 deadline,
         bool approveMax,
@@ -249,7 +249,7 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         external
         virtual
         override
-        returns (uint256 amountToken, uint256 amountETH)
+        returns (uint256 amountToken, uint256 amountBNB)
     {
         address pair = GhostswapLibrary.pairFor(factory, token, WBNB);
         uint256 value = approveMax ? uint256(-1) : liquidity;
@@ -262,31 +262,31 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
             r,
             s
         );
-        (amountToken, amountETH) = removeLiquidityETH(
+        (amountToken, amountBNB) = removeLiquidityBNB(
             token,
             liquidity,
             amountTokenMin,
-            amountETHMin,
+            amountBNBMin,
             to,
             deadline
         );
     }
 
     // **** REMOVE LIQUIDITY (supporting fee-on-transfer tokens) ****
-    function removeLiquidityETHSupportingFeeOnTransferTokens(
+    function removeLiquidityBNBSupportingFeeOnTransferTokens(
         address token,
         uint256 liquidity,
         uint256 amountTokenMin,
-        uint256 amountETHMin,
+        uint256 amountBNBMin,
         address to,
         uint256 deadline
-    ) public virtual override ensure(deadline) returns (uint256 amountETH) {
-        (, amountETH) = removeLiquidity(
+    ) public virtual override ensure(deadline) returns (uint256 amountBNB) {
+        (, amountBNB) = removeLiquidity(
             token,
             WBNB,
             liquidity,
             amountTokenMin,
-            amountETHMin,
+            amountBNBMin,
             address(this),
             deadline
         );
@@ -295,22 +295,22 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
             to,
             IERC20Ghostswap(token).balanceOf(address(this))
         );
-        IWBNB(WBNB).withdraw(amountETH);
-        TransferHelper.safeTransferETH(to, amountETH);
+        IWBNB(WBNB).withdraw(amountBNB);
+        TransferHelper.safeTransferBNB(to, amountBNB);
     }
 
-    function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
+    function removeLiquidityBNBWithPermitSupportingFeeOnTransferTokens(
         address token,
         uint256 liquidity,
         uint256 amountTokenMin,
-        uint256 amountETHMin,
+        uint256 amountBNBMin,
         address to,
         uint256 deadline,
         bool approveMax,
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external virtual override returns (uint256 amountETH) {
+    ) external virtual override returns (uint256 amountBNB) {
         address pair = GhostswapLibrary.pairFor(factory, token, WBNB);
         uint256 value = approveMax ? uint256(-1) : liquidity;
         IGhostswapPair(pair).permit(
@@ -322,11 +322,11 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
             r,
             s
         );
-        amountETH = removeLiquidityETHSupportingFeeOnTransferTokens(
+        amountBNB = removeLiquidityBNBSupportingFeeOnTransferTokens(
             token,
             liquidity,
             amountTokenMin,
-            amountETHMin,
+            amountBNBMin,
             to,
             deadline
         );
@@ -410,7 +410,7 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         _swap(amounts, path, to);
     }
 
-    function swapExactETHForTokens(
+    function swapExactBNBForTokens(
         uint256 amountOutMin,
         address[] calldata path,
         address to,
@@ -439,7 +439,7 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         _swap(amounts, path, to);
     }
 
-    function swapTokensForExactETH(
+    function swapTokensForExactBNB(
         uint256 amountOut,
         uint256 amountInMax,
         address[] calldata path,
@@ -466,10 +466,10 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         );
         _swap(amounts, path, address(this));
         IWBNB(WBNB).withdraw(amounts[amounts.length - 1]);
-        TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
+        TransferHelper.safeTransferBNB(to, amounts[amounts.length - 1]);
     }
 
-    function swapExactTokensForETH(
+    function swapExactTokensForBNB(
         uint256 amountIn,
         uint256 amountOutMin,
         address[] calldata path,
@@ -496,10 +496,10 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         );
         _swap(amounts, path, address(this));
         IWBNB(WBNB).withdraw(amounts[amounts.length - 1]);
-        TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
+        TransferHelper.safeTransferBNB(to, amounts[amounts.length - 1]);
     }
 
-    function swapETHForExactTokens(
+    function swapBNBForExactTokens(
         uint256 amountOut,
         address[] calldata path,
         address to,
@@ -526,9 +526,9 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
             )
         );
         _swap(amounts, path, to);
-        // refund dust eth, if any
+        // refund dust bnb, if any
         if (msg.value > amounts[0])
-            TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
+            TransferHelper.safeTransferBNB(msg.sender, msg.value - amounts[0]);
     }
 
     // **** SWAP (supporting fee-on-transfer tokens) ****
@@ -598,7 +598,7 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         );
     }
 
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(
+    function swapExactBNBForTokensSupportingFeeOnTransferTokens(
         uint256 amountOutMin,
         address[] calldata path,
         address to,
@@ -624,7 +624,7 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
         );
     }
 
-    function swapExactTokensForETHSupportingFeeOnTransferTokens(
+    function swapExactTokensForBNBSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,
         address[] calldata path,
@@ -645,7 +645,7 @@ contract GhostswapRouter02 is IGhostswapRouter02 {
             "GhostswapRouter: INSUFFICIENT_OUTPUT_AMOUNT"
         );
         IWBNB(WBNB).withdraw(amountOut);
-        TransferHelper.safeTransferETH(to, amountOut);
+        TransferHelper.safeTransferBNB(to, amountOut);
     }
 
     // **** LIBRARY FUNCTIONS ****

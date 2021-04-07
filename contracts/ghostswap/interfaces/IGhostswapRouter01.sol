@@ -22,11 +22,11 @@ interface IGhostswapRouter01 {
             uint256 liquidity
         );
 
-    function addLiquidityETH(
+    function addLiquidityBNB(
         address token,
         uint256 amountTokenDesired,
         uint256 amountTokenMin,
-        uint256 amountETHMin,
+        uint256 amountBNBMin,
         address to,
         uint256 deadline
     )
@@ -34,7 +34,7 @@ interface IGhostswapRouter01 {
         payable
         returns (
             uint256 amountToken,
-            uint256 amountETH,
+            uint256 amountBNB,
             uint256 liquidity
         );
 
@@ -48,14 +48,14 @@ interface IGhostswapRouter01 {
         uint256 deadline
     ) external returns (uint256 amountA, uint256 amountB);
 
-    function removeLiquidityETH(
+    function removeLiquidityBNB(
         address token,
         uint256 liquidity,
         uint256 amountTokenMin,
-        uint256 amountETHMin,
+        uint256 amountBNBMin,
         address to,
         uint256 deadline
-    ) external returns (uint256 amountToken, uint256 amountETH);
+    ) external returns (uint256 amountToken, uint256 amountBNB);
 
     function removeLiquidityWithPermit(
         address tokenA,
@@ -71,18 +71,18 @@ interface IGhostswapRouter01 {
         bytes32 s
     ) external returns (uint256 amountA, uint256 amountB);
 
-    function removeLiquidityETHWithPermit(
+    function removeLiquidityBNBWithPermit(
         address token,
         uint256 liquidity,
         uint256 amountTokenMin,
-        uint256 amountETHMin,
+        uint256 amountBNBMin,
         address to,
         uint256 deadline,
         bool approveMax,
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external returns (uint256 amountToken, uint256 amountETH);
+    ) external returns (uint256 amountToken, uint256 amountBNB);
 
     function swapExactTokensForTokens(
         uint256 amountIn,
@@ -100,14 +100,14 @@ interface IGhostswapRouter01 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapExactETHForTokens(
+    function swapExactBNBForTokens(
         uint256 amountOutMin,
         address[] calldata path,
         address to,
         uint256 deadline
     ) external payable returns (uint256[] memory amounts);
 
-    function swapTokensForExactETH(
+    function swapTokensForExactBNB(
         uint256 amountOut,
         uint256 amountInMax,
         address[] calldata path,
@@ -115,7 +115,7 @@ interface IGhostswapRouter01 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapExactTokensForETH(
+    function swapExactTokensForBNB(
         uint256 amountIn,
         uint256 amountOutMin,
         address[] calldata path,
@@ -123,7 +123,7 @@ interface IGhostswapRouter01 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapETHForExactTokens(
+    function swapBNBForExactTokens(
         uint256 amountOut,
         address[] calldata path,
         address to,
