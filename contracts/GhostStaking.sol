@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-// GhostStaking is the coolest bar in town. You come in with some Gomix, and leave with more! The longer you stay, the more Gomix you get.
+// Stake Gomix token to earn Gomix. The longer you stay, the more Gomix you get.
 //
 // This contract handles swapping to and from xGomix, GhostToken's staking token.
 contract GhostStaking is ERC20("GhostStaking", "xGOMIX"), ReentrancyGuard {
@@ -17,9 +17,9 @@ contract GhostStaking is ERC20("GhostStaking", "xGOMIX"), ReentrancyGuard {
         ghost = _ghost;
     }
 
-    // Enter the bar. Pay some GOMIXs. Earn some shares.
+    // Deposit to GhostStaking. Pay some GOMIXs. Earn some shares.
     // Locks Gomix and mints xGomix
-    function enter(uint256 _amount) external nonReentrant {
+    function deposit(uint256 _amount) external nonReentrant {
         // Gets the amount of Gomix locked in the contract
         uint256 totalGomix = ghost.balanceOf(address(this));
         // Gets the amount of xGomix in existence
@@ -40,9 +40,9 @@ contract GhostStaking is ERC20("GhostStaking", "xGOMIX"), ReentrancyGuard {
         );
     }
 
-    // Leave the bar. Claim back your GOMIXs.
+    // Withdraw from GhostStaking. Claim back your GOMIXs.
     // Unclocks the staked + gained Gomix and burns xGomix
-    function leave(uint256 _share) external nonReentrant {
+    function withdraw(uint256 _share) external nonReentrant {
         // Gets the amount of xGomix in existence
         uint256 totalShares = totalSupply();
         // Calculates the amount of Gomix the xGomix is worth

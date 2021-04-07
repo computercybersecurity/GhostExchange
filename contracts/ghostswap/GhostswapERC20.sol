@@ -5,8 +5,8 @@ import "./libraries/SafeMath.sol";
 contract GhostswapERC20 {
     using SafeMathGhostswap for uint256;
 
-    string public constant name = "SushiSwap LP Token";
-    string public constant symbol = "SLP";
+    string public constant name = "GhostSwap LP Token";
+    string public constant symbol = "GLP";
     uint8 public constant decimals = 18;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;

@@ -34,7 +34,7 @@ library GhostswapLibrary {
                         hex"ff",
                         factory,
                         keccak256(abi.encodePacked(token0, token1)),
-                        hex"3578fd581fe8d4590e61c7ea3db413396c221c74286a704cd20030912a88ee13" // init code hash
+                        hex"c327e9eb7da7f72437f15de3d01ed02feb69c0492b4809f1ef3a2b47bebfae51" // init code hash
                     )
                 )
             )
